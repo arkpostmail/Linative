@@ -19,7 +19,7 @@
     }
     #chat {
       position: fixed;
-      bottom: 20px;
+      bottom: 60px;
       right: 20px;
       width: 250px;
       max-height: 200px;
@@ -31,34 +31,36 @@
       font-size: 14px;
       display: none;
     }
-    #chat input, #chatInput {
-      width: 100%;
-      margin-top: 8px;
-      font-size: 14px;
+    #chatInput {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 250px;
+      display: none;
       padding: 6px;
-      border: none;
-      outline: none;
-      color: white;
       background: rgba(255,255,255,0.1);
+      border: none;
+      color: #fff;
+      outline: none;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
 
-<div id="overlay">Click to start</div>
+<div id="overlay">Click to Start</div>
 <div id="chat"></div>
-<input id="chatInput" type="text" placeholder="Type..." style="position:fixed; bottom:0; right:20px; width:250px; display:none;" />
+<input id="chatInput" type="text" placeholder="Type..." />
 
 <script type="module">
   import * as THREE from "https://esm.sh/three@0.161.0";
   import { PointerLockControls } from "https://esm.sh/three@0.161.0/examples/jsm/controls/PointerLockControls.js";
+  import { FBXLoader } from "https://esm.sh/three@0.161.0/examples/jsm/loaders/FBXLoader.js";
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x444444);
 
-  const camera = new THREE.PerspectiveCamera(
-    75, window.innerWidth / window.innerHeight, 0.1, 1000
-  );
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(0, 1.8, 5);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -74,27 +76,41 @@
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  const npc = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 2, 1),
-    new THREE.MeshStandardMaterial({ color: 0x2196f3 })
+  // NPC FBX Model
+  let npcMesh = null;
+  let mixer = null;
+  const clock = new THREE.Clock();
+
+  const loader = new FBXLoader();
+  loader.load(
+    "./models/sad_idle.fbx",
+    object => {
+      npcMesh = object;
+      npcMesh.scale.set(0.01, 0.01, 0.01);
+      npcMesh.position.set(0, 0, -5);
+      npcMesh.rotation.y = Math.PI;
+      scene.add(npcMesh);
+
+      mixer = new THREE.AnimationMixer(npcMesh);
+      if (object.animations && object.animations.length > 0) {
+        const anim = mixer.clipAction(object.animations[0]);
+        anim.play();
+      }
+    },
+    undefined,
+    err => console.error("FBX failed to load:", err)
   );
-  npc.position.set(0, 1, -5);
-  scene.add(npc);
 
+  // Controls
   const controls = new PointerLockControls(camera, document.body);
-
+  const overlay = document.getElementById("overlay");
   overlay.addEventListener("click", () => controls.lock());
   controls.addEventListener("lock", () => overlay.style.display = "none");
   controls.addEventListener("unlock", () => overlay.style.display = "flex");
 
   const keys = { KeyW:false, KeyA:false, KeyS:false, KeyD:false };
-  document.addEventListener("keydown", e => {
-    if (keys[e.code] !== undefined) keys[e.code] = true;
-    if (e.code === "KeyE") interact();
-  });
-  document.addEventListener("keyup", e => {
-    if (keys[e.code] !== undefined) keys[e.code] = false;
-  });
+  document.addEventListener("keydown", e => { if (keys[e.code] !== undefined) keys[e.code] = true; if (e.code === "KeyE") interact(); });
+  document.addEventListener("keyup", e => { if (keys[e.code] !== undefined) keys[e.code] = false; });
 
   let prev = performance.now();
   const velocity = new THREE.Vector3();
@@ -115,7 +131,6 @@
     direction.normalize();
 
     const speed = 15;
-
     velocity.z += direction.z * speed * delta;
     velocity.x += direction.x * speed * delta;
 
@@ -129,12 +144,13 @@
   const chatInput = document.getElementById("chatInput");
 
   function interact() {
-    const dist = npc.position.distanceTo(camera.position);
+    if (!npcMesh) return;
+    const dist = npcMesh.position.distanceTo(camera.position);
     if (dist < 3) {
       chatBox.style.display = "block";
       chatInput.style.display = "block";
       chatInput.focus();
-      addMessage("NPC", "Hello traveler.");
+      addMessage("NPC", "Hey. I’m just… standing here.");
     }
   }
 
@@ -150,20 +166,20 @@
       chatInput.value = "";
 
       const replies = [
-        "Interesting...",
-        "Why do you say that?",
-        "The void is peaceful today.",
-        "Go on...",
-        "I am but a humble cube."
+        "Right...",
+        "Honestly same.",
+        "Standing is my personal brand.",
+        "Do you ever question reality?",
+        "Everything is a placeholder until it's not."
       ];
-      const reply = replies[Math.floor(Math.random() * replies.length)];
-      setTimeout(() => addMessage("NPC", reply), 500);
+      addMessage("NPC", replies[Math.floor(Math.random() * replies.length)]);
     }
   });
 
   function animate() {
     requestAnimationFrame(animate);
     movementUpdate();
+    if (mixer) mixer.update(clock.getDelta());
     renderer.render(scene, camera);
   }
   animate();

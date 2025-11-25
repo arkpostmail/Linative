@@ -24,19 +24,14 @@
 <div id="overlay">Click to start</div>
 
 <script type="module">
-  import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
-  import { PointerLockControls } from "https://unpkg.com/three@0.161.0/examples/jsm/controls/PointerLockControls.js";
-
-  console.log("THREE loaded:", THREE);
+  import * as THREE from "https://esm.sh/three@0.161.0";
+  import { PointerLockControls } from "https://esm.sh/three@0.161.0/examples/jsm/controls/PointerLockControls.js";
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x444444);
 
   const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
+    75, window.innerWidth / window.innerHeight, 0.1, 1000
   );
   camera.position.set(0, 1.8, 5);
 
@@ -63,26 +58,24 @@
 
   const controls = new PointerLockControls(camera, document.body);
 
-  const overlay = document.getElementById("overlay");
   overlay.addEventListener("click", () => controls.lock());
-
   controls.addEventListener("lock", () => overlay.style.display = "none");
   controls.addEventListener("unlock", () => overlay.style.display = "flex");
 
   const keys = { KeyW:false, KeyA:false, KeyS:false, KeyD:false };
-  document.addEventListener("keydown", e => { if (keys[e.code] !== undefined) keys[e.code] = true; });
-  document.addEventListener("keyup", e => { if (keys[e.code] !== undefined) keys[e.code] = false; });
+  document.addEventListener("keydown", e => keys[e.code] = true);
+  document.addEventListener("keyup", e => keys[e.code] = false);
 
-  let prevTime = performance.now();
+  let prev = performance.now();
   const velocity = new THREE.Vector3();
   const direction = new THREE.Vector3();
 
-  function updateMovement() {
+  function movementUpdate() {
     if (!controls.isLocked) return;
 
     const time = performance.now();
-    const delta = (time - prevTime) / 1000;
-    prevTime = time;
+    const delta = (time - prev) / 1000;
+    prev = time;
 
     velocity.x -= velocity.x * 10 * delta;
     velocity.z -= velocity.z * 10 * delta;
@@ -92,7 +85,6 @@
     direction.normalize();
 
     const speed = 5;
-
     if (keys.KeyW || keys.KeyS) velocity.z -= direction.z * speed * delta;
     if (keys.KeyA || keys.KeyD) velocity.x -= direction.x * speed * delta;
 
@@ -104,17 +96,11 @@
 
   function animate() {
     requestAnimationFrame(animate);
-    updateMovement();
+    movementUpdate();
     cube.rotation.y += 0.01;
     renderer.render(scene, camera);
   }
   animate();
-
-  window.addEventListener("resize", () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
 </script>
 
 </body>

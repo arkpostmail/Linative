@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>FPS Working Test</title>
+  <title>NPC Chat Test</title>
   <style>
     body { margin: 0; overflow: hidden; background: #222; }
     #overlay {
@@ -17,11 +17,37 @@
       z-index: 10;
       cursor: pointer;
     }
+    #chat {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 250px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.8);
+      border: 1px solid #666;
+      color: #fff;
+      padding: 10px;
+      font-size: 14px;
+      display: none;
+    }
+    #chat input, #chatInput {
+      width: 100%;
+      margin-top: 8px;
+      font-size: 14px;
+      padding: 6px;
+      border: none;
+      outline: none;
+      color: white;
+      background: rgba(255,255,255,0.1);
+    }
   </style>
 </head>
 <body>
 
 <div id="overlay">Click to start</div>
+<div id="chat"></div>
+<input id="chatInput" type="text" placeholder="Type..." style="position:fixed; bottom:0; right:20px; width:250px; display:none;" />
 
 <script type="module">
   import * as THREE from "https://esm.sh/three@0.161.0";
@@ -39,8 +65,7 @@
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-  scene.add(hemiLight);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
 
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(50, 50),
@@ -49,12 +74,12 @@
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  const cube = new THREE.Mesh(
+  const npc = new THREE.Mesh(
     new THREE.BoxGeometry(1, 2, 1),
     new THREE.MeshStandardMaterial({ color: 0x2196f3 })
   );
-  cube.position.set(0, 1, -5);
-  scene.add(cube);
+  npc.position.set(0, 1, -5);
+  scene.add(npc);
 
   const controls = new PointerLockControls(camera, document.body);
 
@@ -63,8 +88,13 @@
   controls.addEventListener("unlock", () => overlay.style.display = "flex");
 
   const keys = { KeyW:false, KeyA:false, KeyS:false, KeyD:false };
-  document.addEventListener("keydown", e => keys[e.code] = true);
-  document.addEventListener("keyup", e => keys[e.code] = false);
+  document.addEventListener("keydown", e => {
+    if (keys[e.code] !== undefined) keys[e.code] = true;
+    if (e.code === "KeyE") interact();
+  });
+  document.addEventListener("keyup", e => {
+    if (keys[e.code] !== undefined) keys[e.code] = false;
+  });
 
   let prev = performance.now();
   const velocity = new THREE.Vector3();
@@ -77,16 +107,17 @@
     const delta = (time - prev) / 1000;
     prev = time;
 
-    velocity.x -= velocity.x * 10 * delta;
-    velocity.z -= velocity.z * 10 * delta;
+    velocity.x -= velocity.x * 5 * delta;
+    velocity.z -= velocity.z * 5 * delta;
 
     direction.z = Number(keys.KeyS) - Number(keys.KeyW);
     direction.x = Number(keys.KeyD) - Number(keys.KeyA);
     direction.normalize();
 
-    const speed = 5;
-    if (keys.KeyW || keys.KeyS) velocity.z -= direction.z * speed * delta;
-    if (keys.KeyA || keys.KeyD) velocity.x -= direction.x * speed * delta;
+    const speed = 15;
+
+    velocity.z += direction.z * speed * delta;
+    velocity.x += direction.x * speed * delta;
 
     controls.moveRight(-velocity.x * delta);
     controls.moveForward(-velocity.z * delta);
@@ -94,13 +125,54 @@
     camera.position.y = 1.8;
   }
 
+  const chatBox = document.getElementById("chat");
+  const chatInput = document.getElementById("chatInput");
+
+  function interact() {
+    const dist = npc.position.distanceTo(camera.position);
+    if (dist < 3) {
+      chatBox.style.display = "block";
+      chatInput.style.display = "block";
+      chatInput.focus();
+      addMessage("NPC", "Hello traveler.");
+    }
+  }
+
+  function addMessage(sender, text) {
+    chatBox.innerHTML += `<div><strong>${sender}:</strong> ${text}</div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  chatInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && chatInput.value.trim()) {
+      const msg = chatInput.value;
+      addMessage("You", msg);
+      chatInput.value = "";
+
+      const replies = [
+        "Interesting...",
+        "Why do you say that?",
+        "The void is peaceful today.",
+        "Go on...",
+        "I am but a humble cube."
+      ];
+      const reply = replies[Math.floor(Math.random() * replies.length)];
+      setTimeout(() => addMessage("NPC", reply), 500);
+    }
+  });
+
   function animate() {
     requestAnimationFrame(animate);
     movementUpdate();
-    cube.rotation.y += 0.01;
     renderer.render(scene, camera);
   }
   animate();
+
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
 </script>
 
 </body>

@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>FPS Test</title>
+  <title>FPS Working Test</title>
   <style>
     body { margin: 0; overflow: hidden; background: #222; }
-
     #overlay {
       position: fixed;
       inset: 0;
@@ -28,22 +27,26 @@
   import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
   import { PointerLockControls } from "https://unpkg.com/three@0.161.0/examples/jsm/controls/PointerLockControls.js";
 
-  console.log("THREE loaded!");
+  console.log("THREE loaded:", THREE);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x444444);
 
-  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
   camera.position.set(0, 1.8, 5);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  // Lighting
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+  scene.add(hemiLight);
 
-  // Floor
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(50, 50),
     new THREE.MeshStandardMaterial({ color: 0x333333 })
@@ -51,7 +54,6 @@
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  // Cube NPC
   const cube = new THREE.Mesh(
     new THREE.BoxGeometry(1, 2, 1),
     new THREE.MeshStandardMaterial({ color: 0x2196f3 })
@@ -59,25 +61,18 @@
   cube.position.set(0, 1, -5);
   scene.add(cube);
 
-  // Controls
   const controls = new PointerLockControls(camera, document.body);
 
   const overlay = document.getElementById("overlay");
   overlay.addEventListener("click", () => controls.lock());
 
-  controls.addEventListener("lock", () => {
-    overlay.style.display = "none";
-  });
-  controls.addEventListener("unlock", () => {
-    overlay.style.display = "flex";
-  });
+  controls.addEventListener("lock", () => overlay.style.display = "none");
+  controls.addEventListener("unlock", () => overlay.style.display = "flex");
 
-  // Movement keys
   const keys = { KeyW:false, KeyA:false, KeyS:false, KeyD:false };
   document.addEventListener("keydown", e => { if (keys[e.code] !== undefined) keys[e.code] = true; });
   document.addEventListener("keyup", e => { if (keys[e.code] !== undefined) keys[e.code] = false; });
 
-  // Movement physics-ish
   let prevTime = performance.now();
   const velocity = new THREE.Vector3();
   const direction = new THREE.Vector3();
@@ -89,8 +84,8 @@
     const delta = (time - prevTime) / 1000;
     prevTime = time;
 
-    velocity.x -= velocity.x * 10.0 * delta;
-    velocity.z -= velocity.z * 10.0 * delta;
+    velocity.x -= velocity.x * 10 * delta;
+    velocity.z -= velocity.z * 10 * delta;
 
     direction.z = Number(keys.KeyS) - Number(keys.KeyW);
     direction.x = Number(keys.KeyD) - Number(keys.KeyA);
@@ -104,7 +99,6 @@
     controls.moveRight(-velocity.x * delta);
     controls.moveForward(-velocity.z * delta);
 
-    // Keep camera at normal height
     camera.position.y = 1.8;
   }
 
